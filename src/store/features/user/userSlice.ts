@@ -1,33 +1,113 @@
-import { createSlice } from '@reduxjs/toolkit';
+import { createSlice, PayloadAction } from "@reduxjs/toolkit";
+import { api } from "@/store/services/api";
 
-const initialState = {
-  currentUser: null,
-  users: [],
-  loading: false,
-  error: null,
+interface UserProfile {
+  id: string;
+  name: string;
+  email?: string;
+  phoneNumber: string;
+  avatar?: string;
+  grade?: string;
+  points?: number;
+  rank?: number;
+  streakDays?: number;
+  badges?: Badge[];
+}
+
+interface Badge {
+  id: string;
+  name: string;
+  description: string;
+  icon: string;
+  earnedAt: string;
+}
+
+interface UserState {
+  profile: UserProfile | null;
+  preferences: {
+    notifications: boolean;
+    darkMode: boolean;
+    language: string;
+  };
+  isLoading: boolean;
+}
+
+const initialState: UserState = {
+  profile: null,
+  preferences: {
+    notifications: true,
+    darkMode: false,
+    language: "en",
+  },
+  isLoading: false,
 };
 
+// Extend the api slice to include user endpoints
+export const userApi = api.injectEndpoints({
+  endpoints: (builder) => ({
+    getUserProfile: builder.query<UserProfile, void>({
+      query: () => "/user/profile",
+      providesTags: ["User"],
+    }),
+    updateUserProfile: builder.mutation<UserProfile, Partial<UserProfile>>({
+      query: (data) => ({
+        url: "/user/profile",
+        method: "PUT",
+        body: data,
+      }),
+      invalidatesTags: ["User"],
+    }),
+    uploadAvatar: builder.mutation<{ avatarUrl: string }, FormData>({
+      query: (formData) => ({
+        url: "/user/avatar",
+        method: "POST",
+        body: formData,
+      }),
+      invalidatesTags: ["User"],
+    }),
+  }),
+});
+
 const userSlice = createSlice({
-  name: 'user',
+  name: "user",
   initialState,
   reducers: {
-    setUser: (state, action) => {
-      state.currentUser = action.payload;
+    setProfile: (state, action: PayloadAction<UserProfile>) => {
+      state.profile = action.payload;
     },
-    setUsers: (state, action) => {
-      state.users = action.payload;
+    updatePreferences: (
+      state,
+      action: PayloadAction<Partial<UserState["preferences"]>>
+    ) => {
+      state.preferences = { ...state.preferences, ...action.payload };
     },
-    setLoading: (state, action) => {
-      state.loading = action.payload;
+    clearProfile: (state) => {
+      state.profile = null;
     },
-    setError: (state, action) => {
-      state.error = action.payload;
-    },
-    logout: (state) => {
-      state.currentUser = null;
-    },
+  },
+  extraReducers: (builder) => {
+    builder
+      .addMatcher(userApi.endpoints.getUserProfile.matchPending, (state) => {
+        state.isLoading = true;
+      })
+      .addMatcher(
+        userApi.endpoints.getUserProfile.matchFulfilled,
+        (state, action) => {
+          state.isLoading = false;
+          state.profile = action.payload;
+        }
+      )
+      .addMatcher(userApi.endpoints.getUserProfile.matchRejected, (state) => {
+        state.isLoading = false;
+      });
   },
 });
 
-export const { setUser, setUsers, setLoading, setError, logout } = userSlice.actions;
+export const { setProfile, updatePreferences, clearProfile } =
+  userSlice.actions;
+export const {
+  useGetUserProfileQuery,
+  useUpdateUserProfileMutation,
+  useUploadAvatarMutation,
+} = userApi;
 export default userSlice.reducer;
