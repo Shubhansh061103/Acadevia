@@ -1,49 +1,77 @@
-import { createSlice, PayloadAction } from '@reduxjs/toolkit'
-import { User } from '@/types/user'
+import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
+import { authApi } from "./authApi";
 
 interface AuthState {
-  user: User | null
-  token: string | null
-  isAuthenticated: boolean
-  loading: boolean
-  error: string | null
+  user: any | null;
+  token: string | null;
+  isLoading: boolean;
+  error: string | null;
 }
 
 const initialState: AuthState = {
   user: null,
   token: null,
-  isAuthenticated: false,
-  loading: false,
+  isLoading: false,
   error: null,
-}
+};
+
+export const sendOTP = createAsyncThunk(
+  "auth/sendOTP",
+  async ({
+    phoneNumber,
+    userType,
+  }: {
+    phoneNumber: string;
+    userType: string;
+  }) => {
+    return await authApi.sendOTP(phoneNumber, userType);
+  }
+);
+
+export const verifyOTP = createAsyncThunk(
+  "auth/verifyOTP",
+  async ({
+    phoneNumber,
+    otp,
+    userType,
+  }: {
+    phoneNumber: string;
+    otp: string;
+    userType: string;
+  }) => {
+    return await authApi.verifyOTP(phoneNumber, otp, userType);
+  }
+);
 
 const authSlice = createSlice({
-  name: 'auth',
+  name: "auth",
   initialState,
   reducers: {
-    loginStart: (state) => {
-      state.loading = true
-      state.error = null
-    },
-    loginSuccess: (state, action: PayloadAction<{ user: User; token: string }>) => {
-      state.loading = false
-      state.isAuthenticated = true
-      state.user = action.payload.user
-      state.token = action.payload.token
-      state.error = null
-    },
-    loginFailure: (state, action: PayloadAction<string>) => {
-      state.loading = false
-      state.error = action.payload
-    },
     logout: (state) => {
-      state.user = null
-      state.token = null
-      state.isAuthenticated = false
-      state.error = null
+      state.user = null;
+      state.token = null;
+      localStorage.removeItem("token");
+      localStorage.removeItem("userType");
     },
   },
-})
+  extraReducers: (builder) => {
+    builder
+      .addCase(verifyOTP.pending, (state) => {
+        state.isLoading = true;
+        state.error = null;
+      })
+      .addCase(verifyOTP.fulfilled, (state, action) => {
+        state.isLoading = false;
+        state.user = action.payload.user;
+        state.token = action.payload.token;
+        localStorage.setItem("token", action.payload.token);
+      })
+      .addCase(verifyOTP.rejected, (state, action) => {
+        state.isLoading = false;
+        state.error = action.error.message || "Verification failed";
+      });
+  },
+});
 
-export const { loginStart, loginSuccess, loginFailure, logout } = authSlice.actions
-export default authSlice.reducer    
+export const { logout } = authSlice.actions;
+export default authSlice.reducer;
