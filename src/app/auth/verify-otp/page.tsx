@@ -161,24 +161,25 @@ export default function VerifyOTPPage() {
                         </div>
 
                         {/* OTP Input */}
-                        <div className="flex justify-center gap-2 mb-8">
-                            {otp.map((digit, index) => (
-                                <motion.input
-                                    key={index}
-                                    ref={(el) => (inputRefs.current[index] = el)}
-                                    initial={{ scale: 0 }}
-                                    animate={{ scale: 1 }}
-                                    transition={{ delay: index * 0.05 }}
-                                    type="text"
-                                    inputMode="numeric"
-                                    value={digit}
-                                    onChange={(e) => handleChange(index, e.target.value)}
-                                    onKeyDown={(e) => handleKeyDown(index, e)}
-                                    className="w-12 h-12 text-center text-xl font-bold border-2 border-gray-200 rounded-lg focus:border-purple-500 focus:ring-2 focus:ring-purple-200 transition-all"
-                                    maxLength={1}
-                                />
-                            ))}
-                        </div>
+                        {/* OTP Input */}
+<div className="flex justify-center gap-2 mb-8">
+  {otp.map((digit, index) => (
+    <motion.input
+      key={index}
+      ref={(el) => {
+        if (inputRefs.current) {
+          inputRefs.current[index] = el;
+        }
+      }}
+      initial={{ scale: 0 }}
+      animate={{ scale: 1 }}
+      transition={{ delay: index * 0.05 }}
+      type="text"
+      inputMode="numeric"
+      // ... rest of your input props
+    />
+  ))}
+</div>
 
                         {/* Verify Button */}
                         <Button
